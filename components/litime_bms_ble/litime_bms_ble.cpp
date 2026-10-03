@@ -127,36 +127,82 @@ void LitimeBmsBle::gattc_event_handler(esp_gattc_cb_event_t event,
     }
 
     case ESP_GATTC_NOTIFY_EVT: {
-      // Data received from BMS
-      if (param->notify.handle != this->char_notify_handle_)
-        break;
+  // Data received from BMS
+  if (param->notify.handle != this->char_notify_handle_)
+    break;
 
-      ESP_LOGD(TAG, "Received notification: %d bytes", param->notify.value_len);
-      ESP_LOGD(TAG, "RAW HEX: %s", format_hex_pretty(param->notify.value, param->notify.value_len).c_str());
+  ESP_LOGD(TAG, "Received notification: %d bytes",
+           param->notify.value_len);
 
-      // Validate: byte[2] must be 0x65 (status response marker)
-      if (param->notify.value_len < MIN_RESPONSE_LENGTH) {
-        ESP_LOGD(TAG, "Short response (%d bytes), ignoring", param->notify.value_len);
-        break;
-      }
+  // Print complete received packet
+  ESP_LOGD(TAG, "RAW HEX: %s",
+           format_hex_pretty(param->notify.value,
+                             param->notify.value_len).c_str());
 
-      if (param->notify.value[2] != 0x65) {
-        ESP_LOGD(TAG, "Not a status response (byte[2]=0x%02X, expected 0x65), ignoring",
-                 param->notify.value[2]);
-        break;
-      }
+  // Print indexed bytes from the interesting end of the packet
+  ESP_LOGD(TAG, "----- LiTime RAW BYTES 88-%d -----",
+           param->notify.value_len - 1);
 
-      this->parse_status_response_(param->notify.value, param->notify.value_len);
-      this->response_received_ = true;
-      this->missed_updates_ = 0;
-      break;
-    }
-
-    default:
-      break;
+  for (int i = 88; i < param->notify.value_len; i++) {
+    ESP_LOGD(TAG, "BYTE[%03d] = 0x%02X (%u)",
+             i,
+             param->notify.value[i],
+             param->notify.value[i]);
   }
-}
 
+  // Decode the fields currently believed to contain
+  // discharge cycles and total discharged capacity.
+  if (param->notify.value_len >= 104) {
+    uint32_t cycles_raw =
+        get_uint32_le(param->notify.value + 96);
+
+    uint32_t total_discharge_raw =
+        get_uint32_le(param->notify.value + 100);
+
+    ESP_LOGD(TAG,
+             "Cycles RAW bytes[96-99]: %u (0x%08X)",
+             cycles_raw,
+             cycles_raw);
+
+    ESP_LOGD(TAG,
+             "Total Discharge RAW bytes[100-103]: %u (0x%08X)",
+             total_discharge_raw,
+             total_discharge_raw);
+
+    ESP_LOGD(TAG,
+             "Total Discharge interpreted /1000: %.3f Ah",
+             total_discharge_raw / 1000.0f);
+  } else {
+    ESP_LOGW(TAG,
+             "Packet too short for discharge diagnostics (%d bytes)",
+             param->notify.value_len);
+  }
+
+  ESP_LOGD(TAG, "----------------------------------");
+
+  // Validate: byte[2] must be 0x65 (status response marker)
+  if (param->notify.value_len < MIN_RESPONSE_LENGTH) {
+    ESP_LOGD(TAG,
+             "Short response (%d bytes), ignoring",
+             param->notify.value_len);
+    break;
+  }
+
+  if (param->notify.value[2] != 0x65) {
+    ESP_LOGD(TAG,
+             "Not a status response (byte[2]=0x%02X, expected 0x65), ignoring",
+             param->notify.value[2]);
+    break;
+  }
+
+  this->parse_status_response_(
+      param->notify.value,
+      param->notify.value_len);
+
+  this->response_received_ = true;
+  this->missed_updates_ = 0;
+  break;
+}
 void LitimeBmsBle::update() {
   if (this->node_state != espbt::ClientState::ESTABLISHED) {
     ESP_LOGD(TAG, "Not connected, skipping update");
