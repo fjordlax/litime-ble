@@ -1,6 +1,7 @@
 #include "litime_bms_ble.h"
 #include "esphome/core/log.h"
 #include "esphome/core/helpers.h"
+#include <inttypes.h>
 
 #ifdef USE_ESP32
 
@@ -159,19 +160,20 @@ void LitimeBmsBle::gattc_event_handler(esp_gattc_cb_event_t event,
     uint32_t total_discharge_raw =
         get_uint32_le(param->notify.value + 100);
 
-    ESP_LOGD(TAG,
-             "Cycles RAW bytes[96-99]: %u (0x%08X)",
-             cycles_raw,
-             cycles_raw);
+ESP_LOGD(TAG,
+         "Cycles RAW bytes[96-99]: %" PRIu32 " (0x%08" PRIX32 ")",
+         cycles_raw,
+         cycles_raw);
 
-    ESP_LOGD(TAG,
-             "Total Discharge RAW bytes[100-103]: %u (0x%08X)",
-             total_discharge_raw,
-             total_discharge_raw);
+ESP_LOGD(TAG,
+         "Total Discharge RAW bytes[100-103]: %" PRIu32 " (0x%08" PRIX32 ")",
+         total_discharge_raw,
+         total_discharge_raw);
 
-    ESP_LOGD(TAG,
-             "Total Discharge interpreted /1000: %.3f Ah",
-             total_discharge_raw / 1000.0f);
+ESP_LOGD(TAG,
+         "Total Discharge interpreted /1000: %.3f Ah",
+         total_discharge_raw / 1000.0f);
+    
   } else {
     ESP_LOGW(TAG,
              "Packet too short for discharge diagnostics (%d bytes)",
