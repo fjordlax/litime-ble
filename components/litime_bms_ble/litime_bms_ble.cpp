@@ -203,7 +203,14 @@ ESP_LOGD(TAG,
 
   this->response_received_ = true;
   this->missed_updates_ = 0;
+ 
   break;
+}
+
+default:
+  break;
+}
+
 }
 void LitimeBmsBle::update() {
   if (this->node_state != espbt::ClientState::ESTABLISHED) {
