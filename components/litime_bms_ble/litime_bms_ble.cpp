@@ -132,6 +132,7 @@ void LitimeBmsBle::gattc_event_handler(esp_gattc_cb_event_t event,
         break;
 
       ESP_LOGD(TAG, "Received notification: %d bytes", param->notify.value_len);
+      ESP_LOGD(TAG, "RAW HEX: %s", format_hex_pretty(param->notify.value, param->notify.value_len).c_str());
 
       // Validate: byte[2] must be 0x65 (status response marker)
       if (param->notify.value_len < MIN_RESPONSE_LENGTH) {
