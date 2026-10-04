@@ -347,8 +347,7 @@ void LitimeBmsBle::parse_status_response_(const uint8_t *data, size_t len) {
   this->publish_state_(this->discharge_cycles_sensor_, cycles);
 
   // --- Total discharge Ah (bytes 100-103, uint32_le / 1000) ---
-  float total_ah = get_uint32_le(data + 100) / 1000.0f;
-  this->publish_state_(this->total_discharge_ah_sensor_, total_ah);
+float total_ah = static_cast<float>(get_uint32_le(data     + 100));  this->publish_state_(this->total_discharge_ah_sensor_, total_ah);
 
   // --- Update switch states based on battery state ---
   // Heat state byte 68-71: bit 0x80 = discharge disabled
